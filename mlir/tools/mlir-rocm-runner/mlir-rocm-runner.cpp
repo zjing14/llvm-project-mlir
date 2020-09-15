@@ -12,10 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <mutex>
+
 #include "llvm/ADT/STLExtras.h"
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
@@ -205,8 +208,13 @@ compileModuleToROCDLIR(Operation *m, llvm::LLVMContext &llvmContext,
   return llvmModule;
 }
 
+static std::mutex mutex;
+
 static OwnedBlob compileISAToHsaco(const std::string isa, Location loc,
                                    StringRef name) {
+  const std::lock_guard<std::mutex> lock(mutex);
+  llvm::errs() << "[compileISAToHsaco]\n";
+  llvm::errs() << "ISA length: " << isa.size() << "\n";
   // ISA -> ISA in binary form via MC.
   // Use lld to create HSA code object.
   Blob isaBlob;
@@ -302,6 +310,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   configTargetFeatures();
 
   const char gpuBinaryAnnotation[] = "rocdl.hsaco";
+  pm.addPass(createLowerToCFGPass());
   pm.addPass(createGpuKernelOutliningPass());
   auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
   kernelPm.addPass(createStripDebugInfoPass());
