@@ -86,6 +86,10 @@ if( NOT BUILD_SHARED_LIBS )
     add_custom_command(TARGET ${output_archive}
                        POST_BUILD
                        COMMAND ${CMAKE_AR} -M < ${mri_file}
+                       COMMAND echo "output: " ${full_output_path}
+                       COMMAND ls -l ${LLVM_LIBRARY_DIR}
+                       COMMAND echo "install: " ${install_path}
+                       COMMAND ls -l /opt/rocm/lib
                        COMMAND ${CMAKE_COMMAND} -E copy ${full_output_path} ${install_path}
                        DEPENDS ${output_archive_dummy_file})
   endfunction(combine_archives)
