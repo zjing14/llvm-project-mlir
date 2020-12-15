@@ -355,14 +355,18 @@ extern "C" void mgpuMemCopy4DBF16(unsigned short *sourceAllocated, unsigned shor
 // dimensions, strides, paddings, and dilations.
 
 extern "C" void
-mcpuConv2d(float *filterAllocated, float *filterAligned, int64_t filterOffset,
-           int64_t filterSize0, int64_t filterSize1, int64_t filterSize2,
-           int64_t filterSize3, int64_t filterStride0, int64_t filterStride1,
-           int64_t filterStride2, int64_t filterStride3, float *inputAllocated,
+mcpuConv2d( 
+           //float *filterAllocated, float *filterAligned, int64_t filterOffset,
+           //int64_t filterSize0, int64_t filterSize1, int64_t filterSize2,
+           //int64_t filterSize3, int64_t filterStride0, int64_t filterStride1,
+           //int64_t filterStride2, int64_t filterStride3, 
+           StridedMemRefType<float, 4> *filterPtr,
+           float *inputAllocated,
            float *inputAligned, int64_t inputOffset, int64_t inputSize0,
            int64_t inputSize1, int64_t inputSize2, int64_t inputSize3,
            int64_t inputStride0, int64_t inputStride1, int64_t inputStride2,
-           int64_t inputStride3, float *outputAllocated, float *outputAligned,
+           int64_t inputStride3, 
+           float *outputAllocated, float *outputAligned,
            int64_t outputOffset, int64_t outputSize0, int64_t outputSize1,
            int64_t outputSize2, int64_t outputSize3, int64_t outputStride0,
            int64_t outputStride1, int64_t outputStride2, int64_t outputStride3,
@@ -370,11 +374,16 @@ mcpuConv2d(float *filterAllocated, float *filterAligned, int64_t filterOffset,
            int64_t layoutSize, int64_t layoutStride, int32_t stride_h,
            int32_t stride_w, int32_t padding_h, int32_t padding_w,
            int32_t dilation_h, int32_t dilation_w) {
+  llvm::outs() << "In conv2d\n";
 
+  auto filter = *filterPtr;
+  auto filterAllocated = filter.data;
   llvm::SmallVector<int64_t, 4> filterSizes(
-      {filterSize0, filterSize1, filterSize2, filterSize3});
+      //{filterSize0, filterSize1, filterSize2, filterSize3});
+      {filter.sizes[0], filter.sizes[1], filter.sizes[2], filter.sizes[3]});
   llvm::SmallVector<int64_t, 4> filterStrides(
-      {filterStride0, filterStride1, filterStride2, filterStride3});
+      //{filterStride0, filterStride1, filterStride2, filterStride3});
+      {filter.strides[0], filter.strides[1], filter.strides[2], filter.strides[3]});
   llvm::SmallVector<int64_t, 4> inputSizes(
       {inputSize0, inputSize1, inputSize2, inputSize3});
   llvm::SmallVector<int64_t, 4> inputStrides(
