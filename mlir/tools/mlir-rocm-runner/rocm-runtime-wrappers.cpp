@@ -360,124 +360,138 @@ mcpuConv2d(
            //int64_t filterSize0, int64_t filterSize1, int64_t filterSize2,
            //int64_t filterSize3, int64_t filterStride0, int64_t filterStride1,
            //int64_t filterStride2, int64_t filterStride3, 
-           StridedMemRefType<float, 4> *filterPtr,
-           float *inputAllocated,
-           float *inputAligned, int64_t inputOffset, int64_t inputSize0,
-           int64_t inputSize1, int64_t inputSize2, int64_t inputSize3,
-           int64_t inputStride0, int64_t inputStride1, int64_t inputStride2,
-           int64_t inputStride3, 
-           float *outputAllocated, float *outputAligned,
-           int64_t outputOffset, int64_t outputSize0, int64_t outputSize1,
-           int64_t outputSize2, int64_t outputSize3, int64_t outputStride0,
-           int64_t outputStride1, int64_t outputStride2, int64_t outputStride3,
-           int *layouts, int *layoutsAlligned, int64_t layoutOffset,
-           int64_t layoutSize, int64_t layoutStride, int32_t stride_h,
-           int32_t stride_w, int32_t padding_h, int32_t padding_w,
-           int32_t dilation_h, int32_t dilation_w) {
+           StridedMemRefType<float, 4> filter,
+           StridedMemRefType<float, 4> input,
+           StridedMemRefType<float, 4> output) {
+           //float *inputAllocated,
+           //float *inputAligned, int64_t inputOffset, int64_t inputSize0,
+           //int64_t inputSize1, int64_t inputSize2, int64_t inputSize3,
+           //int64_t inputStride0, int64_t inputStride1, int64_t inputStride2,
+           //int64_t inputStride3, 
+           //float *outputAllocated, float *outputAligned,
+           //int64_t outputOffset, int64_t outputSize0, int64_t outputSize1,
+           //int64_t outputSize2, int64_t outputSize3, int64_t outputStride0,
+           //int64_t outputStride1, int64_t outputStride2, int64_t outputStride3,
+           //int *layouts, int *layoutsAlligned, int64_t layoutOffset,
+           //int64_t layoutSize, int64_t layoutStride, int32_t stride_h,
+           //int32_t stride_w, int32_t padding_h, int32_t padding_w,
+           //int32_t dilation_h, int32_t dilation_w) {
   llvm::outs() << "In conv2d\n";
+  llvm::outs() << "filter data " << filter.basePtr << " " << filter.data << "\n";
+  llvm::outs() << filter.offset << "\n";
 
-  auto filter = *filterPtr;
+  //auto filter = *filterPtr;
   auto filterAllocated = filter.data;
   llvm::SmallVector<int64_t, 4> filterSizes(
       //{filterSize0, filterSize1, filterSize2, filterSize3});
       {filter.sizes[0], filter.sizes[1], filter.sizes[2], filter.sizes[3]});
+  llvm::outs() << "filter sizes " << filter.sizes[0] << " " << filter.sizes[1] <<
+    " " << filter.sizes[2] << " " << filter.sizes[3];
+
   llvm::SmallVector<int64_t, 4> filterStrides(
       //{filterStride0, filterStride1, filterStride2, filterStride3});
       {filter.strides[0], filter.strides[1], filter.strides[2], filter.strides[3]});
-  llvm::SmallVector<int64_t, 4> inputSizes(
-      {inputSize0, inputSize1, inputSize2, inputSize3});
-  llvm::SmallVector<int64_t, 4> inputStrides(
-      {inputStride0, inputStride1, inputStride2, inputStride3});
-  llvm::SmallVector<int64_t, 4> outputSizes(
-      {outputSize0, outputSize1, outputSize2, outputSize3});
-  llvm::SmallVector<int64_t, 4> outputStrides(
-      {outputStride0, outputStride1, outputStride2, outputStride3});
+  llvm::outs() << "filter strides " << filter.strides[0] << " " << filter.strides[1] <<
+    " " << filter.strides[2] << " " << filter.strides[3];
 
-  int batchSize, outChannelSize, inChannelSize;
-  int outHeightSize, outWidthSize;
-  int inHeightSize, inWidthSize;
-  int filterHeightSize, filterWidthSize;
-  int inBatchStride, inChannelStride, inHeightStride, inWidthStride;
-  int outBatchStride, outChannelStride, outHeightStride, outWidthStride;
-  int filterOutChanStride, filterInChanStride, filterHeightStride,
-      filterWidthStride;
+  //llvm::outs() << filterAllocated << " " << filterAligned << "\n";
+  //llvm::outs() << filterOffset << "\n";
+  //llvm::outs() << filterSize0 << " " << filterSize1 << "\n";
+  //
+  //llvm::SmallVector<int64_t, 4> inputSizes(
+  //    {inputSize0, inputSize1, inputSize2, inputSize3});
+  //llvm::SmallVector<int64_t, 4> inputStrides(
+  //    {inputStride0, inputStride1, inputStride2, inputStride3});
+  //llvm::SmallVector<int64_t, 4> outputSizes(
+  //    {outputSize0, outputSize1, outputSize2, outputSize3});
+  //llvm::SmallVector<int64_t, 4> outputStrides(
+  //    {outputStride0, outputStride1, outputStride2, outputStride3});
 
-  // layouts[0..3]: filter layout
-  // layouts[4..7]: input layout
-  // layouts[8..11]: output layout
-  int *filterLayout = layouts;
-  int *inputLayout = layouts + 4;
-  int *outputLayout = layouts + 8;
+  //int batchSize, outChannelSize, inChannelSize;
+  //int outHeightSize, outWidthSize;
+  //int inHeightSize, inWidthSize;
+  //int filterHeightSize, filterWidthSize;
+  //int inBatchStride, inChannelStride, inHeightStride, inWidthStride;
+  //int outBatchStride, outChannelStride, outHeightStride, outWidthStride;
+  //int filterOutChanStride, filterInChanStride, filterHeightStride,
+  //    filterWidthStride;
 
-  // Extract proper tensor sizes and strides based on layouts
-  for (size_t i = 0; i < 4; i++) {
-    if (filterLayout[i] == 'k') {
-      filterOutChanStride = filterStrides[i];
-    } else if (filterLayout[i] == 'c') {
-      filterInChanStride = filterStrides[i];
-    } else if (filterLayout[i] == 'y') {
-      filterHeightSize = filterSizes[i];
-      filterHeightStride = filterStrides[i];
-    } else if (filterLayout[i] == 'x') {
-      filterWidthSize = filterSizes[i];
-      filterWidthStride = filterStrides[i];
-    }
+  //// layouts[0..3]: filter layout
+  //// layouts[4..7]: input layout
+  //// layouts[8..11]: output layout
+  //int *filterLayout = layouts;
+  //int *inputLayout = layouts + 4;
+  //int *outputLayout = layouts + 8;
 
-    if (inputLayout[i] == 'n') {
-      inBatchStride = inputStrides[i];
-    } else if (inputLayout[i] == 'c') {
-      inChannelSize = inputSizes[i];
-      inChannelStride = inputStrides[i];
-    } else if (inputLayout[i] == 'h') {
-      inHeightSize = inputSizes[i];
-      inHeightStride = inputStrides[i];
-    } else if (inputLayout[i] == 'w') {
-      inWidthSize = inputSizes[i];
-      inWidthStride = inputStrides[i];
-    }
+  //// Extract proper tensor sizes and strides based on layouts
+  //for (size_t i = 0; i < 4; i++) {
+  //  if (filterLayout[i] == 'k') {
+  //    filterOutChanStride = filterStrides[i];
+  //  } else if (filterLayout[i] == 'c') {
+  //    filterInChanStride = filterStrides[i];
+  //  } else if (filterLayout[i] == 'y') {
+  //    filterHeightSize = filterSizes[i];
+  //    filterHeightStride = filterStrides[i];
+  //  } else if (filterLayout[i] == 'x') {
+  //    filterWidthSize = filterSizes[i];
+  //    filterWidthStride = filterStrides[i];
+  //  }
 
-    if (outputLayout[i] == 'n') {
-      batchSize = outputSizes[i];
-      outBatchStride = outputStrides[i];
-    } else if (outputLayout[i] == 'k') {
-      outChannelSize = outputSizes[i];
-      outChannelStride = outputStrides[i];
-    } else if (outputLayout[i] == 'h') {
-      outHeightSize = outputSizes[i];
-      outHeightStride = outputStrides[i];
-    } else if (outputLayout[i] == 'w') {
-      outWidthSize = outputSizes[i];
-      outWidthStride = outputStrides[i];
-    }
-  }
+  //  if (inputLayout[i] == 'n') {
+  //    inBatchStride = inputStrides[i];
+  //  } else if (inputLayout[i] == 'c') {
+  //    inChannelSize = inputSizes[i];
+  //    inChannelStride = inputStrides[i];
+  //  } else if (inputLayout[i] == 'h') {
+  //    inHeightSize = inputSizes[i];
+  //    inHeightStride = inputStrides[i];
+  //  } else if (inputLayout[i] == 'w') {
+  //    inWidthSize = inputSizes[i];
+  //    inWidthStride = inputStrides[i];
+  //  }
 
-  // Perform forward convolution
-  for (int n = 0; n < batchSize; n++)
-    for (int k = 0; k < outChannelSize; k++)
-      for (int out_h = 0; out_h < outHeightSize; out_h++)
-        for (int out_w = 0; out_w < outWidthSize; out_w++)
-          for (int c = 0; c < inChannelSize; c++)
-            for (int fil_h = 0; fil_h < filterHeightSize; fil_h++)
-              for (int fil_w = 0; fil_w < filterWidthSize; fil_w++) {
-                float input;
-                int in_h = out_h * stride_h + fil_h * dilation_h - padding_h;
-                int in_w = out_w * stride_w + fil_w * dilation_w - padding_w;
+  //  if (outputLayout[i] == 'n') {
+  //    batchSize = outputSizes[i];
+  //    outBatchStride = outputStrides[i];
+  //  } else if (outputLayout[i] == 'k') {
+  //    outChannelSize = outputSizes[i];
+  //    outChannelStride = outputStrides[i];
+  //  } else if (outputLayout[i] == 'h') {
+  //    outHeightSize = outputSizes[i];
+  //    outHeightStride = outputStrides[i];
+  //  } else if (outputLayout[i] == 'w') {
+  //    outWidthSize = outputSizes[i];
+  //    outWidthStride = outputStrides[i];
+  //  }
+  //}
 
-                if (in_h < 0 || in_h >= inHeightSize || in_w < 0 ||
-                    in_w >= inWidthSize)
-                  input = 0.0;
-                else
-                  input =
-                      inputAllocated[n * inBatchStride + c * inChannelStride +
-                                     in_h * inHeightStride +
-                                     in_w * inWidthStride];
+  //// Perform forward convolution
+  //for (int n = 0; n < batchSize; n++)
+  //  for (int k = 0; k < outChannelSize; k++)
+  //    for (int out_h = 0; out_h < outHeightSize; out_h++)
+  //      for (int out_w = 0; out_w < outWidthSize; out_w++)
+  //        for (int c = 0; c < inChannelSize; c++)
+  //          for (int fil_h = 0; fil_h < filterHeightSize; fil_h++)
+  //            for (int fil_w = 0; fil_w < filterWidthSize; fil_w++) {
+  //              float input;
+  //              int in_h = out_h * stride_h + fil_h * dilation_h - padding_h;
+  //              int in_w = out_w * stride_w + fil_w * dilation_w - padding_w;
 
-                outputAllocated[n * outBatchStride + k * outChannelStride +
-                                out_h * outHeightStride +
-                                out_w * outWidthStride] +=
-                    input * filterAllocated[k * filterOutChanStride +
-                                            c * filterInChanStride +
-                                            fil_h * filterHeightStride +
-                                            fil_w * filterWidthStride];
-              }
+  //              if (in_h < 0 || in_h >= inHeightSize || in_w < 0 ||
+  //                  in_w >= inWidthSize)
+  //                input = 0.0;
+  //              else
+  //                input =
+  //                    inputAllocated[n * inBatchStride + c * inChannelStride +
+  //                                   in_h * inHeightStride +
+  //                                   in_w * inWidthStride];
+
+  //              outputAllocated[n * outBatchStride + k * outChannelStride +
+  //                              out_h * outHeightStride +
+  //                              out_w * outWidthStride] +=
+  //                  input * filterAllocated[k * filterOutChanStride +
+  //                                          c * filterInChanStride +
+  //                                          fil_h * filterHeightStride +
+  //                                          fil_w * filterWidthStride];
+  //            }
 }

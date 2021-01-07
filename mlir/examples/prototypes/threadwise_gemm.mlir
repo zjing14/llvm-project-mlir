@@ -17,8 +17,10 @@ func @main() -> (){
   %cf2 = constant 0.00000e+00 : f32
   linalg.fill(%C, %cf2) : memref<4x7xf32>, f32
   call @threadwise_gemm_affine(%A, %B, %C) : (memref<5x4xf32>, memref<5x7xf32>, memref<4x7xf32>) -> ()  
-  %U = memref_cast %C : memref<4x7xf32, 0> to memref<*xf32>
-  call @print_memref_f32(%U):(memref<*xf32>) -> ()
+  //%U = memref_cast %C : memref<4x7xf32, 0> to memref<*xf32>
+  //call @print_memref_f32(%U):(memref<*xf32>) -> ()
+  //call @_mlir_ciface_print_memref_2d_f32print_memref_f32(%C):(memref<4x7xf32>) -> ()
+  call @_mlir_ciface_print_memref_2d_f32(%C):(memref<4x7xf32>) -> ()
   return 
 }
 
@@ -38,6 +40,9 @@ func @threadwise_gemm_affine(%arg0:memref<5x4xf32>, %arg1: memref<5x7xf32>, %arg
   return
 }
 
-func @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+//func @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+//func @print_memref_2d_f32(memref<4x7xf32>)
+func @_mlir_ciface_print_memref_2d_f32(memref<4x7xf32>)
+
 
 }

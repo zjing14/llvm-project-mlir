@@ -90,7 +90,8 @@ module {
   func @mgpuMemDealloc4DFloat(memref<?x?x?x?xf32>)
 
   func @conv2d_host(%arg0: memref<3x3x8x128xf32>, %arg1: memref<128x32x32x8xf32>, %arg2: memref<128x30x30x128xf32>) {
-    %0 = memref_cast %arg0 : memref<3x3x8x128xf32> to memref<?x?x?x?xf32>
+    //%0 = memref_cast %arg0 : memref<3x3x8x128xf32> to memref<?x?x?x?xf32>
+    //%0 = %arg0
     %1 = memref_cast %arg1 : memref<128x32x32x8xf32> to memref<?x?x?x?xf32>
     %2 = memref_cast %arg2 : memref<128x30x30x128xf32> to memref<?x?x?x?xf32>
 
@@ -141,10 +142,14 @@ module {
     store %h, %3[%c9] : memref<12xi32>
     store %w, %3[%c10] : memref<12xi32>
     store %k, %3[%c11] : memref<12xi32>
-    call @mcpuConv2d(%0, %1, %2, %3, %c1_i32, %c1_i32_0, %c0_i32, %c0_i32_1, %c1_i32_2, %c1_i32_3) : (memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<12xi32>, i32, i32, i32, i32, i32, i32) -> ()
+    //call @mcpuConv2d(%0, %1, %2, %3, %c1_i32, %c1_i32_0, %c0_i32, %c0_i32_1, %c1_i32_2, %c1_i32_3) : (memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<12xi32>, i32, i32, i32, i32, i32, i32) -> ()
+    //call @mcpuConv2d(%arg0, %1, %2, %3, %c1_i32, %c1_i32_0, %c0_i32, %c0_i32_1, %c1_i32_2, %c1_i32_3) : (memref<3x3x8x128xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<12xi32>, i32, i32, i32, i32, i32, i32) -> ()
+    call @mcpuConv2d(%arg0, %arg1, %arg2, %3, %c1_i32, %c1_i32_0, %c0_i32, %c0_i32_1, %c1_i32_2, %c1_i32_3) : (memref<3x3x8x128xf32>, memref<128x32x32x8xf32>, memref<128x30x30x128xf32>, memref<12xi32>, i32, i32, i32, i32, i32, i32) -> ()
     return
   }
-  func @mcpuConv2d(memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<12xi32>, i32, i32, i32, i32, i32, i32)
+  //func @mcpuConv2d(memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<12xi32>, i32, i32, i32, i32, i32, i32)
+  //func @mcpuConv2d(memref<3x3x8x128xf32>, memref<?x?x?x?xf32>, memref<?x?x?x?xf32>, memref<12xi32>, i32, i32, i32, i32, i32, i32)
+  func @mcpuConv2d(memref<3x3x8x128xf32>, memref<128x32x32x8xf32>, memref<128x30x30x128xf32>, memref<12xi32>, i32, i32, i32, i32, i32, i32)
 
   func @verify_results(%arg0: memref<128x30x30x128xf32>, %arg1: memref<128x30x30x128xf32>) {
     %c0 = constant 0 : index
