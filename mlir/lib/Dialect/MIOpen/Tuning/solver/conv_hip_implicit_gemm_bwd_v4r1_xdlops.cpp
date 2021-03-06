@@ -62,9 +62,9 @@ PerformanceImplicitGemmBwdDataV4R1Xdlops::
   int64_t ClusterLengths_GemmK = 0;
   int64_t ClusterLengths_GemmM = 0;
   int64_t ClusterLengths_GemmKPack = 0;
-  int64_t SrcDataPerRead_GemmM = 4;
+  int64_t SrcDataPerRead_GemmM = ctx.IsF32() ? 4 : 8;
 
-  int64_t DstDataPerWrite_GemmKPack = 4;
+  int64_t DstDataPerWrite_GemmKPack = ctx.IsF32() ? 4 : 8;
 
   const auto waveSize = 64;
 
@@ -160,9 +160,9 @@ PerformanceImplicitGemmBwdDataV4R1Xdlops::
   int64_t ClusterLengths_GemmK = 0;
   int64_t ClusterLengths_GemmN = 0;
   int64_t ClusterLengths_GemmKPack = 0;
-  int64_t SrcDataPerRead_GemmN = 4;
+  int64_t SrcDataPerRead_GemmN = ctx.IsF32() ? 4 : 8;
 
-  int64_t DstDataPerWrite_GemmKPack = 4;
+  int64_t DstDataPerWrite_GemmKPack = ctx.IsF32() ? 4 : 8;
 
   const auto waveSize = 64;
   const auto BlockSize =
@@ -335,6 +335,13 @@ LogicalResult PerformanceImplicitGemmBwdDataV4R1Xdlops::IsReallyValid(
 
   int64_t GemmM = 0, GemmN = 0, GemmK = 0, gemm_k_total = 0;
 
+  // GemmKPACKSize = 4 for fp16
+  if (ctx.IsF16() && GemmKPACKSize % 4 != 0)
+    return failure();
+
+  if (ctx.IsBF16() && GemmKPACKSize % 2 != 0)
+    return failure();
+
   // check blockwise GEMM size
   for (int64_t gemm_id = 0;
        gemm_id <
@@ -415,37 +422,93 @@ LogicalResult PerformanceImplicitGemmBwdDataV4R1Xdlops::EuristicInit(
   PerformanceImplicitGemmBwdDataV4R1Xdlops tmp;
 
   auto get_euristic_config = [&](auto is_valid_func) {
-    /* MIOpen logic */
-    //    tmp              = {256, 256, 8, 4, 128, 128, true, true};
-
-    tmp = {256, 256, 8, 4, 128, 128, false, false};
-    bool all_visited = false;
-    do {
+    if (ctx.IsF32()) {
+      /* MIOpen logic */
+      //    tmp              = {256, 256, 8, 4, 128, 128, true, true};
+      tmp = {256, 256, 8, 4, 128, 128, false, false};
+      bool all_visited = false;
       do {
-        // list in reverse order of importance,
-        // and favor large GEMM
-        if (!ImplicitGemmUtil::PreviousTwoPower<1, 8>(tmp.GemmKPerBlock))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<1, 4>(tmp.GemmKPACKSize))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<16, 128>(tmp.GemmNPerWave))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmMPerWave))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<16, 256>(tmp.GemmNPerBlock))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmMPerBlock))
-          break;
+        do {
+          // list in reverse order of importance,
+          // and favor large GEMM
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 8>(tmp.GemmKPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 4>(tmp.GemmKPACKSize))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<16, 128>(tmp.GemmNPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmMPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<16, 256>(tmp.GemmNPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmMPerBlock))
+            break;
 
-        all_visited = true;
-      } while (false);
+          all_visited = true;
+        } while (false);
 
-      if (succeeded(is_valid_func(tmp, ctx)))
-        break;
-    } while (!all_visited);
+        if (succeeded(is_valid_func(tmp, ctx)))
+          break;
+      } while (!all_visited);
+    } else if (ctx.IsF16()) {
+      tmp = {256, 256, 8, 8, 128, 128, true, true};
+      bool all_visited = false;
+      do {
+        do {
+          // list in reverse order of importance,
+          // and favor large GEMM
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 8>(tmp.GemmKPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 8>(tmp.GemmKPACKSize))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<16, 128>(tmp.GemmNPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmMPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<16, 256>(tmp.GemmNPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmMPerBlock))
+            break;
+
+          all_visited = true;
+        } while (false);
+
+        if (succeeded(is_valid_func(tmp, ctx)))
+          break;
+      } while (!all_visited);
+    } else if (ctx.IsBF16()) {
+      tmp = {256, 256, 8, 8, 128, 128, true, true};
+      bool all_visited = false;
+      do {
+        do {
+          // list in reverse order of importance,
+          // and favor large GEMM
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 8>(tmp.GemmKPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<2, 8>(tmp.GemmKPACKSize))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<16, 128>(tmp.GemmNPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmMPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<16, 256>(tmp.GemmNPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmMPerBlock))
+            break;
+
+          all_visited = true;
+        } while (false);
+
+        if (succeeded(is_valid_func(tmp, ctx)))
+          break;
+      } while (!all_visited);
+    } else {
+      LLVM_DEBUG(llvm::dbgs() << "Only F32, F16 and Bf16 care supported.");
+      assert(false);
+    }
   };
 
-  // first round: really valid and fast
+  // first round: really valid
   get_euristic_config([](auto config, auto conv_context) {
     return config.IsReallyValid(conv_context);
   });

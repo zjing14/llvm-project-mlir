@@ -92,6 +92,24 @@ public:
                                              const std::size_t GemmN,
                                              const std::size_t GemmK);
 
+  static int64_t GetEPackLength(const ConvolutionContext &ctx) {
+    // Based on data type, Es are packed
+    int EPACK = 1;
+    if (ctx.IsF16()) // for fp16, either 2 or 4 Es could be packed
+    {
+      if (ctx.isXdlOp) // in xdlops, 4 fp16s are packed
+        EPACK = 4;
+      else // for fp16, either 2 or 4 Es could be packed in non-xdlops
+           // scenarios.
+        // EPACK = (C * Y * X % 32) == 0 ? 4 : 2;
+        EPACK = 2;
+    } else if (ctx.IsBF16()) // for bfp16, only 2 Es could be packed
+    {
+      EPACK = 2;
+    }
+    return EPACK;
+  }
+
   static void obtainGemmADimKVectorizable(
       mlir::miopen::ConvOpType opType,
       llvm::StringMap<std::pair<size_t, int64_t>> &dimIndexVal,

@@ -42,37 +42,101 @@ LogicalResult PerformanceImplicitGemmForwardV4R4Xdlops::EuristicInit(
 
   // loop over certain ranges of tuning parameter
   auto get_euristic_config = [&](auto is_valid_func) {
-    /* MIOpen logic */
-    // tmp = {256, 256, 8, 128, 128, 4, false, true, 1};
+    if (ctx.IsF32()) {
+      /* MIOpen logic */
+      // tmp = {256, 256, 8, 128, 128, 4, false, true, 1};
 
-    tmp = {256, 256, 8, 128, 128, 4, false, false, 1};
-    bool all_visited = false;
-    do {
+      tmp = {256, 256, 8, 128, 128, 4, false, false, 1};
+      bool all_visited = false;
       do {
-        // list in reverse order of importance,
-        // and favor large GEMM
-        if (!ImplicitGemmUtil::PreviousTwoPower<1, 4>(
-                tmp.GemmBThreadDataPerRead_GemmN))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<1, 8>(tmp.GemmKPerBlock))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<1, 4>(tmp.GemmKPack))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmNPerWave))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmMPerWave))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmNPerBlock))
-          break;
-        if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmMPerBlock))
-          break;
+        do {
+          // list in reverse order of importance,
+          // and favor large GEMM
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 4>(
+                  tmp.GemmBThreadDataPerRead_GemmN))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 8>(tmp.GemmKPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 4>(tmp.GemmKPack))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmNPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmMPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmNPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmMPerBlock))
+            break;
 
-        all_visited = true;
-      } while (false);
+          all_visited = true;
+        } while (false);
 
-      if (succeeded(is_valid_func(tmp, ctx)))
-        break;
-    } while (!all_visited);
+        if (succeeded(is_valid_func(tmp, ctx)))
+          break;
+      } while (!all_visited);
+    } else if (ctx.IsF16()) {
+      tmp = {256, 256, 8, 128, 128, 8, false, true, 1};
+      bool all_visited = false;
+      do {
+        do {
+          // list in reverse order of importance,
+          // and favor large GEMM
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 8>(
+                  tmp.GemmBThreadDataPerRead_GemmN))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 8>(tmp.GemmKPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 8>(tmp.GemmKPack))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmNPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmMPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmNPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmMPerBlock))
+            break;
+
+          all_visited = true;
+        } while (false);
+
+        if (succeeded(is_valid_func(tmp, ctx)))
+          break;
+      } while (!all_visited);
+    } else if (ctx.IsBF16()) {
+      tmp = {256, 256, 8, 128, 128, 8, false, true, 1};
+
+      bool all_visited = false;
+      do {
+        do {
+          // list in reverse order of importance,
+          // and favor large GEMM
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 8>(
+                  tmp.GemmBThreadDataPerRead_GemmN))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<1, 8>(tmp.GemmKPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<2, 8>(tmp.GemmKPack))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmNPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 128>(tmp.GemmMPerWave))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmNPerBlock))
+            break;
+          if (!ImplicitGemmUtil::PreviousTwoPower<4, 256>(tmp.GemmMPerBlock))
+            break;
+
+          all_visited = true;
+        } while (false);
+
+        if (succeeded(is_valid_func(tmp, ctx)))
+          break;
+      } while (!all_visited);
+    } else {
+      LLVM_DEBUG(llvm::dbgs() << "Only F32, F16, and Bf16 are supported");
+      assert(false);
+    }
   };
 
   // first round: really valid and fast
@@ -138,8 +202,8 @@ PerformanceImplicitGemmForwardV4R4Xdlops::
   int64_t ClusterLengths_GemmK = -1;
   int64_t ClusterLengths_GemmM = -1;
   int64_t ClusterLengths_GemmKPack = -1;
-  int64_t SrcDataPerRead_GemmKPack = 4;
-  int64_t DstDataPerWrite_GemmKPack = 4;
+  int64_t SrcDataPerRead_GemmKPack = ctx.IsF32() ? 4 : 8;
+  int64_t DstDataPerWrite_GemmKPack = ctx.IsF32() ? 4 : 8;
 
   LogicalResult valid = failure();
 
@@ -226,8 +290,8 @@ PerformanceImplicitGemmForwardV4R4Xdlops::
   int64_t ClusterLengths_GemmK = -1;
   int64_t ClusterLengths_GemmN = -1;
   int64_t ClusterLengths_GemmKPack = -1;
-  int64_t SrcDataPerRead_GemmN = 4;
-  int64_t DstDataPerWrite_GemmKPack = 4;
+  int64_t SrcDataPerRead_GemmN = ctx.IsF32() ? 4 : 8;
+  int64_t DstDataPerWrite_GemmKPack = ctx.IsF32() ? 4 : 8;
 
   LogicalResult valid = failure();
 
@@ -349,7 +413,9 @@ PerformanceImplicitGemmForwardV4R4Xdlops::CalculateLdsNumberOfByte(
   const auto a_block_space = GemmKPerBlock * GemmMPerBlock * GemmKPack;
   const auto b_block_space = GemmKPerBlock * GemmNPerBlock * GemmKPack;
 
-  std::size_t lds_size = (a_block_space + b_block_space) * sizeof(float);
+  std::size_t lds_size =
+      (a_block_space + b_block_space) *
+      (ctx.IsF32() ? sizeof(float) : 16); // sizeof(half_float));;
 
   return std::make_tuple(lds_size, success());
 }

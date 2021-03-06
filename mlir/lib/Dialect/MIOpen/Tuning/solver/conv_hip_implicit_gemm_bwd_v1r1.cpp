@@ -104,7 +104,7 @@ PerformanceImplicitGemmBwdDataV1R1::
   int64_t ClusterLengths_GemmM = 0;
   int64_t SrcDataPerRead_GemmM = 4;
   int64_t DstDataPerWrite_GemmM = 4;
-  int64_t DstDataPerWrite_GemmKPACK = 4;
+  int64_t DstDataPerWrite_GemmKPACK = ImplicitGemmUtil::GetEPackLength(ctx);
 
   // calculate vector length on gemmk dimension
   SrcDataPerRead_GemmM =
@@ -126,7 +126,7 @@ PerformanceImplicitGemmBwdDataV1R1::
   const auto a_data_per_thread_copy_gemmk =
       a_data_per_thread_copy / a_data_per_thread_copy_gemmm;
 
-  if (1) { // if (ctx.IsFp32())
+  if (ctx.IsF32()) {
     DstDataPerWrite_GemmM = ImplicitGemmUtil::gcd(DstDataPerWrite_GemmM,
                                                   a_data_per_thread_copy_gemmm);
   }
@@ -138,15 +138,14 @@ PerformanceImplicitGemmBwdDataV1R1::
   if (!(ClusterLengths_GemmK > 0 && ClusterLengths_GemmM > 0))
     return std::make_tuple(-1, -1, -1, -1, failure());
 
-  if (1) { // if(ctx.IsFp32())
+  if (ctx.IsF32())
     return std::make_tuple(ClusterLengths_GemmK, ClusterLengths_GemmM,
                            SrcDataPerRead_GemmM, DstDataPerWrite_GemmM,
                            success());
-  } else {
+  else
     return std::make_tuple(ClusterLengths_GemmK, ClusterLengths_GemmM,
                            SrcDataPerRead_GemmM, DstDataPerWrite_GemmKPACK,
                            success());
-  }
 }
 
 std::tuple<int64_t, int64_t, int64_t, int64_t, LogicalResult>
@@ -157,7 +156,7 @@ PerformanceImplicitGemmBwdDataV1R1::
   int64_t ClusterLengths_GemmN = 0;
   int64_t SrcDataPerRead_GemmN = 4;
   int64_t DstDataPerWrite_GemmN = 4;
-  int64_t DstDataPerWrite_GemmKPACK = 4; // GetEPackLength(ctx, false);
+  int64_t DstDataPerWrite_GemmKPACK = ImplicitGemmUtil::GetEPackLength(ctx);
 
   SrcDataPerRead_GemmN =
       ImplicitGemmUtil::gcd(SrcDataPerRead_GemmN, GemmNPerBlock);
@@ -185,7 +184,7 @@ PerformanceImplicitGemmBwdDataV1R1::
       b_data_per_thread_copy / b_data_per_thread_copy_gemmn;
 
   // GemmBBlockCopyDstDataPerWrite_GemmN also bounded by size of threadwise copy
-  if (1) { // if(ctx.IsFp32())
+  if (ctx.IsF32()) {
     DstDataPerWrite_GemmN = ImplicitGemmUtil::gcd(DstDataPerWrite_GemmN,
                                                   b_data_per_thread_copy_gemmn);
   }
@@ -197,8 +196,7 @@ PerformanceImplicitGemmBwdDataV1R1::
   if (!(ClusterLengths_GemmK > 0 && ClusterLengths_GemmN > 0))
     return std::make_tuple(-1, -1, -1, -1, failure());
 
-  if (1) // if(ctx.IsFp32())
-  {
+  if (ctx.IsF32()) {
     return std::make_tuple(ClusterLengths_GemmK, ClusterLengths_GemmN,
                            SrcDataPerRead_GemmN, DstDataPerWrite_GemmN,
                            success());
@@ -273,8 +271,9 @@ PerformanceImplicitGemmBwdDataV1R1::CalculateLdsNumberOfByte(
   if (failed(valid))
     return std::make_tuple(0, failure());
 
-  const auto ThreadGemmDataPerRead_GemmM = GemmMPerThread;
-  const auto ThreadGemmDataPerRead_GemmN = GemmNPerThread;
+  const int64_t epack = ImplicitGemmUtil::GetEPackLength(ctx);
+  const auto ThreadGemmDataPerRead_GemmM = ctx.IsF32() ? GemmMPerThread : epack;
+  const auto ThreadGemmDataPerRead_GemmN = ctx.IsF32() ? GemmNPerThread : epack;
 
   const auto max_lds_align = ImplicitGemmUtil::lcm(
       GemmABlockCopyDescDataPerWriteGemm, GemmBBlockCopyDescDataPerWriteGemm,
@@ -493,7 +492,7 @@ llvm::StringMap<int64_t> ConvHipImplicitGemmBwdDataV1R1::GetSolution(
            GemmNLevel1Cluster, std::ignore) =
       config.CalculateBlockGemmPerformanceParameters(ctx);
 
-  if (1) { // if(ctx.IsFp32())
+  if (ctx.IsF32()) {
     std::tie(
         GemmABlockCopyClusterLengths_GemmK, GemmABlockCopyClusterLengths_GemmM,
         GemmABlockCopySrcDataPerRead_GemmM, GemmABlockCopyDstDataPerWrite_GemmM,
@@ -549,6 +548,11 @@ llvm::StringMap<int64_t> ConvHipImplicitGemmBwdDataV1R1::GetSolution(
       CalculateGemmASrcVectorReadDim(ctx);
   result["matrix_b_source_vector_read_dim"] =
       CalculateGemmBSrcVectorReadDim(ctx);
+
+  result["matrix_a_dest_data_per_write_dim_kpack"] =
+      GemmABlockCopyDstDataPerWrite_GemmKPACK;
+  result["matrix_b_dest_data_per_write_dim_kpack"] =
+      GemmBBlockCopyDstDataPerWrite_GemmKPACK;
 
   for (llvm::StringMap<int64_t>::iterator it = result.begin();
        it != result.end(); ++it)
