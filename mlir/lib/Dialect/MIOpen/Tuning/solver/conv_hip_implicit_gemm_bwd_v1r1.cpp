@@ -534,13 +534,27 @@ llvm::StringMap<int64_t> ConvHipImplicitGemmBwdDataV1R1::GetSolution(
   result["matrix_a_cluster_lengths_gemmk"] = GemmABlockCopyClusterLengths_GemmK;
   result["matrix_a_cluster_lengths_gemmM"] = GemmABlockCopyClusterLengths_GemmM;
   result["matrix_a_source_data_per_read"] = GemmABlockCopySrcDataPerRead_GemmM;
-  result["matrix_a_dest_data_per_write_dim_m"] =
+
+  if (ctx.IsF32()) {
+    result["matrix_a_dest_data_per_write_dim_m"] =
       GemmABlockCopyDstDataPerWrite_GemmM;
+  } else {
+    result["matrix_a_dest_data_per_write_dim_m"] =
+      GemmABlockCopyDstDataPerWrite_GemmKPACK;
+  }
+
   result["matrix_b_cluster_lengths_gemmk"] = GemmBBlockCopyClusterLengths_GemmK;
   result["matrix_b_cluster_lengths_gemmN"] = GemmBBlockCopyClusterLengths_GemmN;
   result["matrix_b_source_data_per_read"] = GemmBBlockCopySrcDataPerRead_GemmN;
-  result["matrix_b_dest_data_per_write_dim_n"] =
+
+  if (ctx.IsF32()) {
+    result["matrix_b_dest_data_per_write_dim_n"] =
       GemmBBlockCopyDstDataPerWrite_GemmN;
+  } else {
+    result["matrix_b_dest_data_per_write_dim_n"] =
+      GemmBBlockCopyDstDataPerWrite_GemmKPACK;
+  }
+
   result["matrix_c_dest_data_per_write"] =
       GemmCThreadCopyDstDataPerWrite_GemmN1;
 
@@ -549,10 +563,6 @@ llvm::StringMap<int64_t> ConvHipImplicitGemmBwdDataV1R1::GetSolution(
   result["matrix_b_source_vector_read_dim"] =
       CalculateGemmBSrcVectorReadDim(ctx);
 
-  result["matrix_a_dest_data_per_write_dim_kpack"] =
-      GemmABlockCopyDstDataPerWrite_GemmKPACK;
-  result["matrix_b_dest_data_per_write_dim_kpack"] =
-      GemmBBlockCopyDstDataPerWrite_GemmKPACK;
 
   for (llvm::StringMap<int64_t>::iterator it = result.begin();
        it != result.end(); ++it)

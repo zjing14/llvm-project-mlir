@@ -302,48 +302,48 @@ PerformanceImplicitGemmForwardV4R4Xdlops::
   if (failed(valid))
     LLVM_DEBUG(llvm::dbgs() << "invalid performance parameter\n");
   /* MIOpen logic */
-  /*
+  
     // GemmN is src vector read dimension
     // calculate vector length on gemmn dimension based on global tensor layout
-    auto dimIndexVal = ctx.dimIndexVal;
-    const auto y  = dimIndexVal["y"].second;
-    const auto x  = dimIndexVal["x"].second;
-    const auto ho = dimIndexVal["ho"].second;
-    const auto wo = dimIndexVal["wo"].second;
-    const auto conv_stride_h = ctx.strideVal[0];
-    const auto conv_stride_w = ctx.strideVal[1];
-    const auto conv_dilation_w = ctx.dilationVal[1];
-    const auto in_left_pad_h  = ctx.paddingVal[0];
-    const auto in_left_pad_w  = ctx.paddingVal[1];
-    const auto in_right_pad_h = ctx.paddingVal[2];
-    const auto in_right_pad_w = ctx.paddingVal[3];
+  auto dimIndexVal = ctx.dimIndexVal;
+  const auto y  = dimIndexVal["y"].second;
+  const auto x  = dimIndexVal["x"].second;
+  const auto ho = dimIndexVal["ho"].second;
+  const auto wo = dimIndexVal["wo"].second;
+  const auto conv_stride_h = ctx.strideVal[0];
+  const auto conv_stride_w = ctx.strideVal[1];
+  const auto conv_dilation_w = ctx.dilationVal[1];
+  const auto in_left_pad_h  = ctx.paddingVal[0];
+  const auto in_left_pad_w  = ctx.paddingVal[1];
+  const auto in_right_pad_h = ctx.paddingVal[2];
+  const auto in_right_pad_w = ctx.paddingVal[3];
 
-      // GemmN is src vector read dimension, bounded by input tensor global
-    memory layout
-      // TODO this logic need to be more aggresive
-      if(y == 1 && x == 1 && conv_stride_h == 1 && conv_stride_w == 1 &&
+  // GemmN is src vector read dimension, bounded by input tensor global
+  //memory layout
+  // TODO this logic need to be more aggresive
+  if(y == 1 && x == 1 && conv_stride_h == 1 && conv_stride_w == 1 &&
     in_left_pad_h == 0 && in_left_pad_w == 0 && in_right_pad_h == 0 &&
     in_right_pad_w == 0)
-      {
-          SrcDataPerRead_GemmN = ImplicitGemmUtil::gcd(SrcDataPerRead_GemmN, ho
+  {
+      SrcDataPerRead_GemmN = ImplicitGemmUtil::gcd(SrcDataPerRead_GemmN, ho
     * wo);
-      }
-      else if(conv_stride_w == 1 && in_left_pad_w == 0 && in_right_pad_w == 0)
-      {
-          SrcDataPerRead_GemmN = ImplicitGemmUtil::gcd(SrcDataPerRead_GemmN,
+  }
+  else if(conv_stride_w == 1 && in_left_pad_w == 0 && in_right_pad_w == 0)
+  {
+      SrcDataPerRead_GemmN = ImplicitGemmUtil::gcd(SrcDataPerRead_GemmN,
     wo);
-      }
-      else if(conv_stride_w == 1)
-      {
-          SrcDataPerRead_GemmN =
+  }
+  else if(conv_stride_w == 1)
+  {
+    SrcDataPerRead_GemmN =
               ImplicitGemmUtil::gcd(SrcDataPerRead_GemmN, wo, in_left_pad_w,
     in_right_pad_w, conv_dilation_w);
-      }
-      else
-      {
-          SrcDataPerRead_GemmN = 1;
-      }
-  */
+  }
+  else
+  {
+    SrcDataPerRead_GemmN = 1;
+  }
+  
   // SrcDataPerRead_GemmN also bounded by GemmNPerBlock
   SrcDataPerRead_GemmN =
       ImplicitGemmUtil::gcd(SrcDataPerRead_GemmN, GemmNPerBlock);
@@ -415,7 +415,7 @@ PerformanceImplicitGemmForwardV4R4Xdlops::CalculateLdsNumberOfByte(
 
   std::size_t lds_size =
       (a_block_space + b_block_space) *
-      (ctx.IsF32() ? sizeof(float) : 16); // sizeof(half_float));;
+      (ctx.IsF32() ? sizeof(float) : 2);//sizeof(half_float::half));
 
   return std::make_tuple(lds_size, success());
 }
