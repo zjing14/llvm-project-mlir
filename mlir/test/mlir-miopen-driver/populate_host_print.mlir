@@ -16,7 +16,7 @@
 // F32-NEXT: call @mcpuMemset4D{{.*}}({{.*}}, {{.*}}) : (memref<?x?x?x?x[[TYPE]]>, [[TYPE]]) -> ()
 // F32-NEXT: call @mcpuMemset4D{{.*}}({{.*}}, {{.*}}) : (memref<?x?x?x?x[[TYPE]]>, [[TYPE]]) -> ()
 // F32-NEXT: call @gpu_conv({{.*}}, {{.*}}, {{.*}}) : (memref<[[K]]x[[C]]x[[Y]]x[[X]]x[[TYPE]]>, memref<[[N]]x[[C]]x[[HI]]x[[WI]]x[[TYPE]]>, memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[TYPE]]>) -> ()
-// F32-NEXT: call @convert_result(%{{.*}}, %{{.*}}) : (memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[TYPE]]>, memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[PRINT_TYPE]]>) -> ()
+// F32-NEXT: call @convert_tensor[[N]]x[[K]]x[[HO]]x[[WO]](%{{.*}}, %{{.*}}) : (memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[TYPE]]>, memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[PRINT_TYPE]]>) -> ()
 // F32-NEXT: memref_cast %{{.*}} : memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[PRINT_TYPE]]> to memref<*x[[PRINT_TYPE]]>
 // F32-NEXT: call @print_memref_f32(%{{.*}}) : (memref<*x[[PRINT_TYPE]]>) -> ()
 // F32-NEXT: dealloc {{.*}} : memref<[[K]]x[[C]]x[[Y]]x[[X]]x[[TYPE]]>
@@ -39,7 +39,7 @@
 // F16-NEXT: call @mcpuMemset4D{{.*}}({{.*}}, {{.*}}) : (memref<?x?x?x?x[[TYPE]]>, [[TYPE]]) -> ()
 // F16-NEXT: call @mcpuMemset4D{{.*}}({{.*}}, {{.*}}) : (memref<?x?x?x?x[[TYPE]]>, [[TYPE]]) -> ()
 // F16-NEXT: call @gpu_conv({{.*}}, {{.*}}, {{.*}}) : (memref<[[K]]x[[C]]x[[Y]]x[[X]]x[[TYPE]]>, memref<[[N]]x[[C]]x[[HI]]x[[WI]]x[[TYPE]]>, memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[TYPE]]>) -> ()
-// F16-NEXT: call @convert_result(%{{.*}}, %{{.*}}) : (memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[TYPE]]>, memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[PRINT_TYPE]]>) -> ()
+// F16-NEXT: call @convert_tensor[[N]]x[[K]]x[[HO]]x[[WO]](%{{.*}}, %{{.*}}) : (memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[TYPE]]>, memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[PRINT_TYPE]]>) -> ()
 // F16-NEXT: memref_cast %{{.*}} : memref<[[N]]x[[K]]x[[HO]]x[[WO]]x[[PRINT_TYPE]]> to memref<*x[[PRINT_TYPE]]>
 // F16-NEXT: call @print_memref_f32(%{{.*}}) : (memref<*x[[PRINT_TYPE]]>) -> ()
 // F16-NEXT: dealloc {{.*}} : memref<[[K]]x[[C]]x[[Y]]x[[X]]x[[TYPE]]>
